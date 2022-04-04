@@ -38,6 +38,8 @@ volatile unsigned char phase_on_count = 0;
 volatile unsigned int live_counter = 0;
 
 volatile unsigned char val[8];
+int fade_delay = 0;
+int fade_pos =0;
 
 #define SPI_DDR                 DDRB
 #define SPI_PORT                PORTB
@@ -136,6 +138,28 @@ ISR (PCINT0_vect){
 	phase_on_count = 0;
 }
 
+void fade_test(void){
+	}
+
+void clear_all(){
+	unsigned char tmp = 0;
+	for(tmp=0;tmp<8;tmp++){
+		val[tmp]=0xff;
+	}
+}
+
+void debug(void){
+	clear_all();
+	if(!(PIND&(1<<PD7))) val[7] = 0x0;   //switch 1    PD4   11	 PD7
+	if(!(PIND&(1<<PB1))) val[6] = 0x0;   //switch 2    PD3   13   PB1
+	if(!(PINC&(1<<PC0))) val[5] =0x0;   //switch 3    PC5   23   PC0
+	if(!(PINC&(1<<PC1))) val[4] =0x0;   //switch 4    PC4   24   PC1
+	if(!(PINC&(1<<PC2))) val[3] =0x0;   //switch 5    PC3   25   PC2
+	if(!(PINC&(1<<PC3))) val[2] =0x0;   //switch 6    PC2   26   PC3
+	if(!(PINC&(1<<PC4))) val[1] =0x0;   //switch 7    PC1   27   PC4
+	if(!(PINC&(1<<PC5))) val[0] =0x0;   //switch 8    PC0   28   PC5
+	dmx_lost = 0; //disable check for DMX timeout as not req.
+}
 //############################################################################
 //Main programm
 int main (void)
@@ -202,19 +226,7 @@ int main (void)
 				val[tmp] = (255 - dmx_buffer[dmx_adresse+tmp]);
 			}
 		}else{   //debug code goes here
-			LED_TOGGLE
-			for(tmp=0;tmp<8;tmp++){
-				val[tmp]=0xff;
-			}
-			if(!(PIND&(1<<PD7))) val[7] = 0x0;   //switch 1    PD4   11	 PD7
-			if(!(PIND&(1<<PB1))) val[6] = 0x0;   //switch 2    PD3   13   PB1
-			if(!(PINC&(1<<PC0))) val[5] =0x0;   //switch 3    PC5   23   PC0
-			if(!(PINC&(1<<PC1))) val[4] =0x0;   //switch 4    PC4   24   PC1
-			if(!(PINC&(1<<PC2))) val[3] =0x0;   //switch 5    PC3   25   PC2
-			if(!(PINC&(1<<PC3))) val[2] =0x0;   //switch 6    PC2   26   PC3
-			if(!(PINC&(1<<PC4))) val[1] =0x0;   //switch 7    PC1   27   PC4
-			if(!(PINC&(1<<PC5))) val[0] =0x0;   //switch 8    PC0   28   PC5
-			dmx_lost = 0; //disable check for DMX timeout as not req.
+			debug();
 		}
 
 		if(dmx_lost>=DMX_LOST_TIMEOUT){
