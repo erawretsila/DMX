@@ -160,6 +160,7 @@ void debug(void){
 	if(!(PINC&(1<<PC5))) val[0] =0x0;   //switch 8    PC0   28   PC5
 	dmx_lost = 0; //disable check for DMX timeout as not req.
 }
+
 //############################################################################
 //Main programm
 int main (void)
