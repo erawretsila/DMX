@@ -4,11 +4,11 @@
 # is public domain), believed to be neutral to any flavor of "make"
 # (GNU make, BSD make, SysV make)
 
-MCU = atmega328p	
-CLOCK = 12000000	
+MCU = atmega328p
+CLOCK = 16000000
 FORMAT = ihex
 TARGET = DMX_DIMMER_SWITCH
-SRC = $(TARGET).c 
+SRC = $(TARGET).c
 ASRC =
 OPT = s
 
@@ -104,7 +104,7 @@ AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
 #AVRDUDE_VERBOSE = -v -v
 
 AVRDUDE_BASIC = -p $(MCU) -c $(AVRDUDE_PROGRAMMER)
-AVRDUDE_FLAGS = $(AVRDUDE_BASIC) $(AVRDUDE_NO_VERIFY) $(AVRDUDE_VERBOSE) $(AVRDUDE_ERASE_COUNTER) 
+AVRDUDE_FLAGS = $(AVRDUDE_BASIC) $(AVRDUDE_NO_VERIFY) $(AVRDUDE_VERBOSE) $(AVRDUDE_ERASE_COUNTER)
 
 CC = avr-gcc
 OBJCOPY = avr-objcopy

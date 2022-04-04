@@ -1,10 +1,13 @@
 /*------------------------------------------------------------------------------
  Copyright:      Radig Ulrich  mailto: mail@ulrichradig.de
  Author:         Radig Ulrich
- Remarks:        
+ Remarks:
  known Problems: none
  Version:        19.04.2017
  Description:    DMX_8 Kanal_Dimmer
+ Modified by Aliste.ware mailto: alister.ware@ntlworrld.com
+ changed pins fro dip switch
+ *reconfigure switch 10 & switch 9 for debug mode
 ------------------------------------------------------------------------------*/
 
 
@@ -26,7 +29,7 @@
 
 // map table with 255 values. Three times the same value scaled down at the end
 //uint8_t valMap[] = {90,89,89,88,88,87,87,...7,7,6,6,5,5,4,4,3,3,2,2,1,0,0};
-	
+
 volatile unsigned char dmx_buffer[513];
 volatile unsigned int dmx_lost = DMX_LOST_TIMEOUT;
 
@@ -58,7 +61,7 @@ ISR (USART_RX_vect){
 		if(dmx_channel_rx_count > 1){
 			dmx_lost = 0;
 		}
-		dmx_channel_rx_count = 0;	
+		dmx_channel_rx_count = 0;
 		dmx_buffer[0] = tmp;
 		if(dmx_buffer[0] == 0){
 			dmx_valid = 1;
@@ -68,9 +71,9 @@ ISR (USART_RX_vect){
 		}
 		return;
 	}
-	
+
 	if(dmx_valid){
-		dmx_buffer[dmx_channel_rx_count] = tmp;	
+		dmx_buffer[dmx_channel_rx_count] = tmp;
 		if(dmx_channel_rx_count < 513)
 		{
 			dmx_channel_rx_count++;
@@ -88,6 +91,7 @@ void out_ext (unsigned char value){
 	CS_595_HI();
 }
 
+
 //############################################################################
 //
 static inline void spi_init(void){
@@ -98,7 +102,7 @@ static inline void spi_init(void){
 	//SPI: enable, master, positive clock phase, msb first, SPI speed fosc/2
 	SPCR = (1<<SPE) | (1<<MSTR);
 	SPSR = (1<<SPI2X);
-	
+
 	out_ext(0x00);
 }
 
@@ -109,17 +113,17 @@ ISR (TIMER2_COMPA_vect)
 	unsigned char out = 0;
 	unsigned char tmp = 0;
 	phase_on_count++;
-	
+
 	if(phase_on_count > 240){
 		phase_on_count = 0;
 	}
-	
+
 	for(tmp = 0;tmp <8;tmp++){
 		if(phase_on_count>val[tmp]) out |= (1<<tmp);
 //		if(phase_on_count>65) out |= (1<<tmp);
 	}
 	out_ext(out);
-	
+
 	if(dmx_lost<DMX_LOST_TIMEOUT){
 		dmx_lost++;
 	}
@@ -134,14 +138,14 @@ ISR (PCINT0_vect){
 
 //############################################################################
 //Main programm
-int main (void) 
-{  
+int main (void)
+{
 	unsigned int dmx_adresse_tmp = 0;
 	unsigned char tmp = 0;
 
 	LED_OUT;
 	spi_init();
-		
+
 	//PIN CHANGE INTERRUPT ON PHASE SYNC
 	PCICR |= (1<<PCIE0);
 	PCMSK0 |= (1<<PCINT0);
@@ -149,25 +153,25 @@ int main (void)
 	//Init usart DMX-BUS
 	UBRR0   = (F_CPU / (DMX_BAUD * 16L) - 1);
 	UCSR0B|=(1 << RXEN0 | 1<< RXCIE0);
-	UCSR0C|=(1<<USBS0); //USBS0 2 Stop bits	
+	UCSR0C|=(1<<USBS0); //USBS0 2 Stop bits
 	sei();//Globale Interrupts Enable
-	
+
 	//Switch 75176 to INPUT RXD
 	DDRD |= (1<<PD2);
 	PORTD &= ~(1<<PD2);
-	
+
 	//Timer for the phase angle calculation
 	TCCR2A |= (1<<WGM21);
 	TCCR2B |= (1<<CS21|1<<CS20); // :32
 	TIMSK2 |= (1<<OCIE2A);
 
 	// :32 Teiler
-	// :2 Clock Source 
+	// :2 Clock Source
 	// :50 Hz
 	// :92 - 1 Stepping
-	
+
 	OCR2A = (F_CPU/32/2/50/240) - 1;
-	
+
 	//Pullup for DIP Switch
 	PORTD |= (1<<PD3)|(1<<PD4)|(1<<PD7);
 	PORTC |= (1<<PC5)|(1<<PC4)|(1<<PC3)|(1<<PC2)|(1<<PC1)|(1<<PC0);
@@ -176,7 +180,7 @@ int main (void)
 	//Infinate loop
 	while(1){
 		//Read DMX Address from Switch
-		dmx_adresse_tmp = 0;                            //           orig        new     
+		dmx_adresse_tmp = 0;                            //           orig        new
 		if(!(PIND&(1<<PD7))) dmx_adresse_tmp |= 0x01;   //switch 1    PD4   11	 PD7
  		if(!(PIND&(1<<PB1))) dmx_adresse_tmp |= 0x02;   //switch 2    PD3   13   PB1
 		if(!(PINC&(1<<PC0))) dmx_adresse_tmp |= 0x04;   //switch 3    PC5   23   PC0
@@ -187,38 +191,43 @@ int main (void)
 		if(!(PINC&(1<<PC5))) dmx_adresse_tmp |= 0x80;   //switch 8    PC0   28   PC5
 		if(!(PINB&(1<<PD3))) dmx_adresse_tmp |= 0x0100; //switch 9    PB1    2   PD3
 		                  //	        				  switch 10   PD7    1   PD4
-		if(dmx_adresse_tmp == 0) dmx_adresse_tmp = 1;  
+		if(dmx_adresse_tmp == 0) dmx_adresse_tmp = 1;
 		if(dmx_adresse_tmp > 505) dmx_adresse_tmp = 505;
-		if(dmx_adresse != dmx_adresse_tmp) dmx_adresse =  dmx_adresse_tmp;	
-		
+		if(dmx_adresse != dmx_adresse_tmp) dmx_adresse =  dmx_adresse_tmp;
+
 		//new calculation of val
 
 		if(PIND&(1<<PD4)){   //	      PD7				  switch 10   PD7    1   PD4
 			for(tmp = 0;tmp <8;tmp++){
 				val[tmp] = (255 - dmx_buffer[dmx_adresse+tmp]);
 			}
-		}else{
-			for(tmp = 0;tmp <8;tmp++){
-				if(dmx_buffer[dmx_adresse+tmp]>128){
-					val[tmp] = 0;
-				}
-				else{
-					val[tmp] = 255;
-				}
+		}else{   //debug code goes here
+			LED_TOGGLE
+			for(tmp=0;tmp<8;tmp++){
+				val[tmp]=0xff;
 			}
+			if(!(PIND&(1<<PD7))) val[0] = 0x0;   //switch 1    PD4   11	 PD7
+			if(!(PIND&(1<<PB1))) val[1] = 0x0;   //switch 2    PD3   13   PB1
+			if(!(PINC&(1<<PC0))) val[2] =0x0;   //switch 3    PC5   23   PC0
+			if(!(PINC&(1<<PC1))) val[3] =0x0;   //switch 4    PC4   24   PC1
+			if(!(PINC&(1<<PC2))) val[4] =0x0;   //switch 5    PC3   25   PC2
+			if(!(PINC&(1<<PC3))) val[5] =0x0;   //switch 6    PC2   26   PC3
+			if(!(PINC&(1<<PC4))) val[6] =0x0;   //switch 7    PC1   27   PC4
+			if(!(PINC&(1<<PC5))) val[7] =0x0;                                             ;   //switch 8    PC0   28   PC5
 		}
-		
+/*
 		if(dmx_lost==DMX_LOST_TIMEOUT){
 			for(tmp = 0;tmp <8;tmp++){
 				dmx_buffer[dmx_adresse + tmp] = 0;
 			}
 		}
-		
+*
+*/
 		if((live_counter++) > 1000) {
 			LED_OFF
 //			LED_TOGGLE
 //			live_counter = 0;
 		}
-		
+
 	}
 }
