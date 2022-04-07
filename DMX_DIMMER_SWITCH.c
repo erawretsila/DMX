@@ -5,9 +5,6 @@
  known Problems: none
  Version:        19.04.2017
  Description:    DMX_8 Kanal_Dimmer
- Modified by Aliste.ware mailto: alister.ware@ntlworrld.com
- changed pins fro dip switch
- *reconfigure switch 10 & switch 9 for debug mode
 ------------------------------------------------------------------------------*/
 
 
@@ -16,7 +13,7 @@
 #include <stdio.h>
 
 #ifndef F_CPU		//I prefer to define freq in the make file
-#define F_CPU 12000000
+#define F_CPU 16000000
 #endif
 
 #define LED_OUT		DDRD |= (1<<PD5);
@@ -38,6 +35,12 @@ volatile unsigned char phase_on_count = 0;
 volatile unsigned int live_counter = 0;
 
 volatile unsigned char val[8];
+volatile unsigned char brightnes = 0;
+volatile uint8_t dir = 0;
+volatile uint8_t count = 0;
+
+
+unsigned char tmp = 0;
 
 #define SPI_DDR                 DDRB
 #define SPI_PORT                PORTB
@@ -91,7 +94,6 @@ void out_ext (unsigned char value){
 	CS_595_HI();
 }
 
-
 //############################################################################
 //
 static inline void spi_init(void){
@@ -127,6 +129,19 @@ ISR (TIMER2_COMPA_vect)
 	if(dmx_lost<DMX_LOST_TIMEOUT){
 		dmx_lost++;
 	}
+	// fade up fade down
+	count++;
+	if (count==0){
+		if (dir){   //fade down
+			brightnes--;
+		} else {
+			brightnes++;
+		}
+		if (brightnes == 0xff){ //wrap arround so reverse direction
+			dir = ~dir;
+		}
+	}
+
 }
 
 //############################################################################
@@ -135,13 +150,36 @@ ISR (PCINT0_vect){
 	TCNT2 = 0;
 	phase_on_count = 0;
 }
-
 //############################################################################
+
+//Set all Lamps Off
+void clear(void){
+		for(tmp = 0;tmp <8;tmp++){
+		val[tmp] = 0xff;
+	}
+}
+
+//Debug mode
+void debug(){
+	clear();
+	if((PIND&(1<<PD3))) {  //switch 9    PB1    2   PD3
+		brightnes = 0xff;
+	}
+	if(!(PIND&(1<<PD7))) val[0]=0xff-brightnes;   //switch 1    PD4   11	 PD7
+	if(!(PINB&(1<<PB1))) val[1]=0xff-brightnes;   //switch 2    PD3   13   PB1
+	if(!(PINC&(1<<PC0))) val[2]=0xff-brightnes;   //switch 3    PC5   23   PC0
+	if(!(PINC&(1<<PC1))) val[3]=0xff-brightnes;   //switch 4    PC4   24   PC1
+	if(!(PINC&(1<<PC2))) val[4]=0xff-brightnes;   //switch 5    PC3   25   PC2
+	if(!(PINC&(1<<PC3))) val[5]=0xff-brightnes;   //switch 6    PC2   26   PC3
+	if(!(PINC&(1<<PC4))) val[6]=0xff-brightnes;   //switch 7    PC1   27   PC4
+	if(!(PINC&(1<<PC5))) val[7]=0xff-brightnes;   //switch 8    PC0   28   PC5
+	dmx_lost=0; //DISABLE DMX DETECTION IN DEBUG MODE
+}
+
 //Main programm
 int main (void)
 {
 	unsigned int dmx_adresse_tmp = 0;
-	unsigned char tmp = 0;
 
 	LED_OUT;
 	spi_init();
@@ -177,19 +215,19 @@ int main (void)
 	PORTC |= (1<<PC5)|(1<<PC4)|(1<<PC3)|(1<<PC2)|(1<<PC1)|(1<<PC0);
 	PORTB |= (1<<PB1);
 
-	//Infinate loop
+	//Initiate loop
 	while(1){
 		//Read DMX Address from Switch
 		dmx_adresse_tmp = 0;                            //           orig        new
 		if(!(PIND&(1<<PD7))) dmx_adresse_tmp |= 0x01;   //switch 1    PD4   11	 PD7
- 		if(!(PIND&(1<<PB1))) dmx_adresse_tmp |= 0x02;   //switch 2    PD3   13   PB1
+ 		if(!(PINB&(1<<PB1))) dmx_adresse_tmp |= 0x02;   //switch 2    PD3   13   PB1
 		if(!(PINC&(1<<PC0))) dmx_adresse_tmp |= 0x04;   //switch 3    PC5   23   PC0
 		if(!(PINC&(1<<PC1))) dmx_adresse_tmp |= 0x08;   //switch 4    PC4   24   PC1
 		if(!(PINC&(1<<PC2))) dmx_adresse_tmp |= 0x10;   //switch 5    PC3   25   PC2
 		if(!(PINC&(1<<PC3))) dmx_adresse_tmp |= 0x20;   //switch 6    PC2   26   PC3
 		if(!(PINC&(1<<PC4))) dmx_adresse_tmp |= 0x40;   //switch 7    PC1   27   PC4
 		if(!(PINC&(1<<PC5))) dmx_adresse_tmp |= 0x80;   //switch 8    PC0   28   PC5
-		if(!(PINB&(1<<PD3))) dmx_adresse_tmp |= 0x0100; //switch 9    PB1    2   PD3
+		if(!(PIND&(1<<PD3))) dmx_adresse_tmp |= 0x0100; //switch 9    PB1    2   PD3
 		                  //	        				  switch 10   PD7    1   PD4
 		if(dmx_adresse_tmp == 0) dmx_adresse_tmp = 1;
 		if(dmx_adresse_tmp > 505) dmx_adresse_tmp = 505;
@@ -201,27 +239,14 @@ int main (void)
 			for(tmp = 0;tmp <8;tmp++){
 				val[tmp] = (255 - dmx_buffer[dmx_adresse+tmp]);
 			}
-		}else{   //debug code goes here
-			LED_TOGGLE
-			for(tmp=0;tmp<8;tmp++){
-				val[tmp]=0xff;
+			if(dmx_lost==DMX_LOST_TIMEOUT){
+				clear();
 			}
-			if(!(PIND&(1<<PD7))) val[7] = 0x0;   //switch 1    PD4   11	 PD7
-			if(!(PIND&(1<<PB1))) val[6] = 0x0;   //switch 2    PD3   13   PB1
-			if(!(PINC&(1<<PC0))) val[5] =0x0;   //switch 3    PC5   23   PC0
-			if(!(PINC&(1<<PC1))) val[4] =0x0;   //switch 4    PC4   24   PC1
-			if(!(PINC&(1<<PC2))) val[3] =0x0;   //switch 5    PC3   25   PC2
-			if(!(PINC&(1<<PC3))) val[2] =0x0;   //switch 6    PC2   26   PC3
-			if(!(PINC&(1<<PC4))) val[1] =0x0;   //switch 7    PC1   27   PC4
-			if(!(PINC&(1<<PC5))) val[0] =0x0;   //switch 8    PC0   28   PC5
-			dmx_lost = 0; //disable check for DMX timeout as not req.
+			brightnes=0x00; //ensure fade up starts at minimum
+		} else {
+			debug();
 		}
 
-		if(dmx_lost>=DMX_LOST_TIMEOUT){
-			for(tmp = 0;tmp <8;tmp++){
-				dmx_buffer[dmx_adresse + tmp] = 0;
-			}
-		}
 
 		if((live_counter++) > 1000) {
 			LED_OFF
