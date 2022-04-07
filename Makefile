@@ -5,7 +5,7 @@
 # (GNU make, BSD make, SysV make)
 
 MCU = atmega328p
-CLOCK = 12000000
+CLOCK = 16000000
 FORMAT = ihex
 TARGET = DMX_DIMMER_SWITCH
 SRC = $(TARGET).c
