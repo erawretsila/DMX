@@ -170,6 +170,7 @@ void clear(void){
 
 //Debug mode
 void debug(){
+	cli();   //disable interupts
 	clear();
 	if((PIND&(1<<PD3))) {  //switch 9    PB1    2   PD3
 		brightnes = 0xff;
@@ -182,7 +183,6 @@ void debug(){
 		if(!(PINC&(1<<PC4))) val[6]=0xff-brightnes;   //switch 7    PC1   27   PC4
 		if(!(PINC&(1<<PC5))) val[7]=0xff-brightnes;   //switch 8    PC0   28   PC5
 	} else {
-		cli();   //disable interupts
 		if(fade_led == 0 && (PIND&(1<<PD7))) fade_led++;   //switch 1    PD4   11	 PD7
 		if(fade_led == 1 && (PINB&(1<<PB1))) fade_led++;   //switch 2    PD3   13   PB1
 		if(fade_led == 2 && (PINC&(1<<PC0))) fade_led++;   //switch 3    PC5   23   PC0
@@ -196,9 +196,9 @@ void debug(){
 		} else {
 			fade_led=0;
 		}
-		sei();  //re-enable interupts
 	}
 	dmx_lost=0; //DISABLE DMX DETECTION IN DEBUG MODE
+	sei();  //re-enable interupts
 }
 
 //Main programm
