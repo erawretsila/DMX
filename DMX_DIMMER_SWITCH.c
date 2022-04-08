@@ -38,6 +38,7 @@ volatile unsigned char val[8];
 volatile unsigned char brightnes = 0;
 volatile uint8_t dir = 0;
 volatile uint8_t count = 0;
+volatile uint8_t fade_led = 0;
 
 
 unsigned char tmp = 0;
@@ -102,7 +103,7 @@ static inline void spi_init(void){
 	// pull SCK high
 	SPI_PORT |= (1<<SPI_SCK);
 	//SPI: enable, master, positive clock phase, msb first, SPI speed fosc/2
-	SPCR = (1<<SPE) | (1<<MSTR) | (1<<DORD);
+	SPCR = (1<<SPE) | (1<<MSTR);
 	SPSR = (1<<SPI2X);
 
 	out_ext(0x00);
@@ -131,7 +132,8 @@ ISR (TIMER2_COMPA_vect)
 	}
 	// fade up fade down
 	count++;
-	if (count==0){
+	if (count>0x7f){
+		count=0;
 		if (dir){   //fade down
 			brightnes--;
 			if (brightnes == 0x00){ //wrap arround so reverse direction
@@ -141,6 +143,10 @@ ISR (TIMER2_COMPA_vect)
 			brightnes++;
 			if (brightnes == 0xff){ //wrap arround so reverse direction
 				dir = ~dir;
+				fade_led++;
+				if (fade_led>7){
+					fade_led=0;
+				}
 			}
 		}
 	}
@@ -167,15 +173,17 @@ void debug(){
 	clear();
 	if((PIND&(1<<PD3))) {  //switch 9    PB1    2   PD3
 		brightnes = 0xff;
+		if(!(PIND&(1<<PD7))) val[0]=0xff-brightnes;   //switch 1    PD4   11	 PD7
+		if(!(PINB&(1<<PB1))) val[1]=0xff-brightnes;   //switch 2    PD3   13   PB1
+		if(!(PINC&(1<<PC0))) val[2]=0xff-brightnes;   //switch 3    PC5   23   PC0
+		if(!(PINC&(1<<PC1))) val[3]=0xff-brightnes;   //switch 4    PC4   24   PC1
+		if(!(PINC&(1<<PC2))) val[4]=0xff-brightnes;   //switch 5    PC3   25   PC2
+		if(!(PINC&(1<<PC3))) val[5]=0xff-brightnes;   //switch 6    PC2   26   PC3
+		if(!(PINC&(1<<PC4))) val[6]=0xff-brightnes;   //switch 7    PC1   27   PC4
+		if(!(PINC&(1<<PC5))) val[7]=0xff-brightnes;   //switch 8    PC0   28   PC5
+	} else {
+		val[fade_led]=brightnes;
 	}
-	if(!(PIND&(1<<PD7))) val[0]=0xff-brightnes;   //switch 1    PD4   11	 PD7
-	if(!(PINB&(1<<PB1))) val[1]=0xff-brightnes;   //switch 2    PD3   13   PB1
-	if(!(PINC&(1<<PC0))) val[2]=0xff-brightnes;   //switch 3    PC5   23   PC0
-	if(!(PINC&(1<<PC1))) val[3]=0xff-brightnes;   //switch 4    PC4   24   PC1
-	if(!(PINC&(1<<PC2))) val[4]=0xff-brightnes;   //switch 5    PC3   25   PC2
-	if(!(PINC&(1<<PC3))) val[5]=0xff-brightnes;   //switch 6    PC2   26   PC3
-	if(!(PINC&(1<<PC4))) val[6]=0xff-brightnes;   //switch 7    PC1   27   PC4
-	if(!(PINC&(1<<PC5))) val[7]=0xff-brightnes;   //switch 8    PC0   28   PC5
 	dmx_lost=0; //DISABLE DMX DETECTION IN DEBUG MODE
 }
 
@@ -252,8 +260,8 @@ int main (void)
 
 
 		if((live_counter++) > 1000) {
-			LED_OFF
-//			LED_TOGGLE
+			LED_OFF //DMX led off
+			PORTD |= (1<<PD3)|(1<<PD4)|(1<<PD7); // Restore Pulups
 //			live_counter = 0;
 		}
 
