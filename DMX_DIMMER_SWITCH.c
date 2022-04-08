@@ -102,7 +102,7 @@ static inline void spi_init(void){
 	// pull SCK high
 	SPI_PORT |= (1<<SPI_SCK);
 	//SPI: enable, master, positive clock phase, msb first, SPI speed fosc/2
-	SPCR = (1<<SPE) | (1<<MSTR) | (1<DORD);
+	SPCR = (1<<SPE) | (1<<MSTR) | (1<<DORD);
 	SPSR = (1<<SPI2X);
 
 	out_ext(0x00);
