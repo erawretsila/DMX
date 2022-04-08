@@ -134,11 +134,14 @@ ISR (TIMER2_COMPA_vect)
 	if (count==0){
 		if (dir){   //fade down
 			brightnes--;
+			if (brightnes == 0x00){ //wrap arround so reverse direction
+				dir = ~dir;
+			}
 		} else {
 			brightnes++;
-		}
-		if (brightnes == 0xff){ //wrap arround so reverse direction
-			dir = ~dir;
+			if (brightnes == 0xff){ //wrap arround so reverse direction
+				dir = ~dir;
+			}
 		}
 	}
 
