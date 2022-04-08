@@ -182,7 +182,21 @@ void debug(){
 		if(!(PINC&(1<<PC4))) val[6]=0xff-brightnes;   //switch 7    PC1   27   PC4
 		if(!(PINC&(1<<PC5))) val[7]=0xff-brightnes;   //switch 8    PC0   28   PC5
 	} else {
-		val[fade_led]=brightnes;
+		cli();   //disable interupts
+		if(fade_led == 0 && (PIND&(1<<PD7))) fade_led++;   //switch 1    PD4   11	 PD7
+		if(fade_led == 1 && (PINB&(1<<PB1))) fade_led++;   //switch 2    PD3   13   PB1
+		if(fade_led == 2 && (PINC&(1<<PC0))) fade_led++;   //switch 3    PC5   23   PC0
+		if(fade_led == 3 && (PINC&(1<<PC1))) fade_led++;   //switch 4    PC4   24   PC1
+		if(fade_led == 4 && (PINC&(1<<PC2))) fade_led++;   //switch 5    PC3   25   PC2
+		if(fade_led == 5 && (PINC&(1<<PC3))) fade_led++;   //switch 6    PC2   26   PC3
+		if(fade_led == 6 && (PINC&(1<<PC4))) fade_led++;   //switch 7    PC1   27   PC4
+		if(fade_led == 7 && (PINC&(1<<PC5))) fade_led++;   //switch 8    PC0   28   PC5
+		if(fade_led<8){
+			val[fade_led]=brightnes;
+		} else {
+			fade_led=0;
+		}
+		sei();  //re-enable interupts
 	}
 	dmx_lost=0; //DISABLE DMX DETECTION IN DEBUG MODE
 }
