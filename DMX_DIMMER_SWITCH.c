@@ -205,7 +205,7 @@ void debug(){
 int main (void)
 {
 	unsigned int dmx_adresse_tmp = 0;
-
+	clear();
 	LED_OUT;
 	spi_init();
 
